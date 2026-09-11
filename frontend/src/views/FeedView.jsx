@@ -93,6 +93,24 @@ export default function FeedView() {
     }
   };
 
+  const handleUsageSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await feedApi.use(usageForm);
+      alert('Pemakaian pakan berhasil dicatat!');
+      setShowUsageModal(false);
+      setUsageForm({
+        usage_date: new Date().toISOString().split('T')[0],
+        feed_item_id: '1',
+        quantity_kg: '',
+        notes: ''
+      });
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Gagal menyimpan pemakaian pakan');
+    }
+  };
+
   const handleDeletePurchase = async (id, feedName, quantity) => {
     if (window.confirm(`Apakah Anda yakin ingin menghapus data pembelian ${quantity} KG ${feedName} ini?\n\nStok pakan akan otomatis dikurangi kembali.`)) {
       try {
