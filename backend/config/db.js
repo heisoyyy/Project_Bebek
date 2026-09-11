@@ -18,7 +18,7 @@ function getPool() {
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'duck_farm_db',
       waitForConnections: true,
-      connectionLimit: 10,
+      connectionLimit: 5,
       queueLimit: 0,
       multipleStatements: true,
       dateStrings: true,
@@ -36,7 +36,7 @@ async function query(sql, params = []) {
 
 async function initDatabase() {
   try {
-    // Koneksi langsung ke database yang sudah ada (support lokal & cloud)
+    // Inisialisasi schema saja (CREATE TABLE IF NOT EXISTS - aman dijalankan berkali-kali)
     const initConn = await mysql.createConnection({
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || 3306,
@@ -49,11 +49,7 @@ async function initDatabase() {
 
     const schemaSql = fs.readFileSync(path.join(__dirname, '../schema.sql'), 'utf8');
     await initConn.query(schemaSql);
-    console.log('✅ MySQL Database Schema initialized successfully.');
-
-    const seedSql = fs.readFileSync(path.join(__dirname, '../seed.sql'), 'utf8');
-    await initConn.query(seedSql);
-    console.log('✅ MySQL Seed Data initialized successfully.');
+    console.log('✅ Database Schema initialized successfully.');
 
     await initConn.end();
   } catch (err) {

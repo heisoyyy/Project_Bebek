@@ -39,8 +39,13 @@ async function startServer() {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server Kandang Bebek API berjalan di:`);
     console.log(`   - Local   : http://localhost:${PORT}`);
-    console.log(`   - Network : http://192.168.1.36:${PORT}`);
   });
 }
 
-startServer();
+// Jalankan server lokal (bukan Vercel)
+if (require.main === module) {
+  startServer();
+}
+
+// Export app untuk Vercel serverless
+module.exports = app;
