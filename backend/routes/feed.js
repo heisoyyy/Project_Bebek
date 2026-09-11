@@ -117,6 +117,10 @@ router.post('/usage', async (req, res) => {
     const { usage_date, feed_item_id, quantity_kg, notes } = req.body;
     const qty = parseFloat(quantity_kg);
 
+    if (isNaN(qty) || qty <= 0) {
+      return res.status(400).json({ success: false, message: 'Jumlah pemakaian (KG) harus lebih besar dari 0' });
+    }
+
     const itemRows = await db.query("SELECT * FROM feed_items WHERE id = ?", [feed_item_id]);
     if (!itemRows.length) return res.status(404).json({ success: false, message: 'Item pakan tidak ditemukan' });
     const item = itemRows[0];
@@ -125,11 +129,28 @@ router.post('/usage', async (req, res) => {
       return res.status(400).json({ success: false, message: `Stok pakan ${item.name} tidak cukup (Tersisa: ${item.stock_kg} KG)` });
     }
 
-    await db.query(
-      `INSERT INTO feed_usages (usage_date, coop_id, feed_item_id, quantity_kg, notes)
-       VALUES (?, 1, ?, ?, ?)`,
-      [usage_date, feed_item_id, qty, notes || '']
+    // Check if usage for this date and feed_item_id already exists
+    const existing = await db.query(
+      "SELECT * FROM feed_usages WHERE usage_date = ? AND feed_item_id = ?",
+      [usage_date, feed_item_id]
     );
+
+    if (existing.length > 0) {
+      const oldQty = parseFloat(existing[0].quantity_kg);
+      const newTotalQty = oldQty + qty;
+      const combinedNotes = notes ? (existing[0].notes ? `${existing[0].notes}, ${notes}` : notes) : existing[0].notes;
+
+      await db.query(
+        "UPDATE feed_usages SET quantity_kg = ?, notes = ? WHERE id = ?",
+        [newTotalQty, combinedNotes, existing[0].id]
+      );
+    } else {
+      await db.query(
+        `INSERT INTO feed_usages (usage_date, coop_id, feed_item_id, quantity_kg, notes)
+         VALUES (?, 1, ?, ?, ?)`,
+        [usage_date, feed_item_id, qty, notes || '']
+      );
+    }
 
     await db.query(
       "UPDATE feed_items SET stock_kg = GREATEST(0, stock_kg - ?) WHERE id = ?",
