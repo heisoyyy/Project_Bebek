@@ -1,5 +1,3 @@
-USE duck_farm_db;
-
 -- 1. Reset all transaction and log tables (empty data)
 SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE TABLE duck_population_logs;
