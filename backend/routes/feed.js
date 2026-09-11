@@ -13,7 +13,7 @@ router.get('/items', async (req, res) => {
       "SELECT SUM(quantity_kg) AS total_usage FROM feed_usages WHERE usage_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
     );
     const totalUsage7d = parseFloat(usageRows[0]?.total_usage || 0);
-    const dailyAvgUsage = totalUsage7d > 0 ? totalUsage7d / 7 : 55.0;
+    const dailyAvgUsage = totalUsage7d > 0 ? totalUsage7d / 7 : 70.0;
     const estDaysRemaining = dailyAvgUsage > 0 ? parseFloat((totalStockKg / dailyAvgUsage).toFixed(1)) : 0;
 
     res.json({

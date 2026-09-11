@@ -308,7 +308,7 @@ export default function FeedView() {
               </div>
               <div className="form-group">
                 <label className="form-label">Jumlah Pemakaian Total (KG)</label>
-                <input type="number" step="0.1" className="form-input" placeholder="Contoh: 10" value={usageForm.quantity_kg} onChange={(e) => setUsageForm({ ...usageForm, quantity_kg: e.target.value })} required />
+                <input type="number" step="0.1" className="form-input" placeholder="Contoh: 70" value={usageForm.quantity_kg} onChange={(e) => setUsageForm({ ...usageForm, quantity_kg: e.target.value })} required />
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => setShowUsageModal(false)} className="btn btn-outline">Batal</button>
