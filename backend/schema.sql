@@ -1,5 +1,4 @@
-CREATE DATABASE IF NOT EXISTS duck_farm_db;
-USE duck_farm_db;
+-- Schema untuk duck_farm_db (database sudah dibuat sebelumnya)
 
 -- 1. Kandang (Single Coop)
 CREATE TABLE IF NOT EXISTS coops (

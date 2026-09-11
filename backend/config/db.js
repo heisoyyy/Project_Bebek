@@ -6,6 +6,9 @@ dotenv.config();
 
 let pool;
 
+// Gunakan SSL jika DB_SSL=true (untuk TiDB Cloud / cloud MySQL)
+const sslConfig = process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : false;
+
 function getPool() {
   if (!pool) {
     pool = mysql.createPool({
@@ -18,7 +21,8 @@ function getPool() {
       connectionLimit: 10,
       queueLimit: 0,
       multipleStatements: true,
-      dateStrings: true
+      dateStrings: true,
+      ssl: sslConfig
     });
   }
   return pool;
@@ -32,13 +36,15 @@ async function query(sql, params = []) {
 
 async function initDatabase() {
   try {
-    // Initial connection without database to create DB if not exists
+    // Koneksi langsung ke database yang sudah ada (support lokal & cloud)
     const initConn = await mysql.createConnection({
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || 3306,
       user: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || '',
-      multipleStatements: true
+      database: process.env.DB_NAME || 'duck_farm_db',
+      multipleStatements: true,
+      ssl: sslConfig
     });
 
     const schemaSql = fs.readFileSync(path.join(__dirname, '../schema.sql'), 'utf8');
