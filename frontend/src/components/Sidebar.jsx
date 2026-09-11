@@ -17,13 +17,20 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       {/* Desktop Sidebar */}
       <aside className="sidebar">
         <div style={{ padding: '0.5rem 0.5rem 1.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', boxShadow: '0 0 10px #34d399' }}></span>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
-              Kandang Bebek
-            </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <img 
+              src="/logo.jpg" 
+              alt="Evandika Duck Farm Logo" 
+              style={{ width: 44, height: 44, borderRadius: '12px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }} 
+            />
+            <div>
+              <h1 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
+                Evandika Duck Farm
+              </h1>
+              <p style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: 600, marginTop: '0.15rem' }}>ESTD 2015</p>
+            </div>
           </div>
-          <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.35rem', fontWeight: 500 }}>Sistem Pengelolaan Internal</p>
+          <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.65rem', fontWeight: 500 }}>Sistem Pengelolaan Internal</p>
         </div>
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
