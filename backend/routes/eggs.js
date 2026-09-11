@@ -79,16 +79,6 @@ router.post('/', async (req, res) => {
       [production_date, good, cracked, total, population, productivity, notes || '', good, cracked, total, population, productivity, notes || '']
     );
 
-    // Auto sync egg inventory
-    const lastInv = await db.query("SELECT final_stock_butir FROM egg_inventory ORDER BY record_date DESC, id DESC LIMIT 1");
-    const initStock = lastInv[0]?.final_stock_butir || 0;
-
-    await db.query(
-      `INSERT INTO egg_inventory (record_date, initial_stock_butir, added_production_butir, sold_butir, damaged_butir, consumed_butir, final_stock_butir, notes)
-       VALUES (?, ?, ?, 0, ?, 0, ?, ?)`,
-      [production_date, initStock, good, cracked, initStock + good, `Otomatis dari produksi ${production_date}`]
-    );
-
     res.json({
       success: true,
       message: 'Data produksi telur H-1 berhasil disimpan',

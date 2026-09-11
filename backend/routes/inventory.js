@@ -10,17 +10,28 @@ function formatTrai(totalEggs) {
   return `${trai} Trai + ${remaining} Butir`;
 }
 
+// Calculate master egg stock statistics dynamically
+async function getStockStats() {
+  const prodRows = await db.query("SELECT COALESCE(SUM(good_eggs), 0) AS total_produced FROM egg_productions");
+  const totalProduced = parseInt(prodRows[0]?.total_produced) || 0;
+
+  const outRows = await db.query("SELECT COALESCE(SUM(sold_butir + damaged_butir + consumed_butir), 0) AS total_out FROM egg_inventory");
+  const totalOut = parseInt(outRows[0]?.total_out) || 0;
+
+  const currentStock = Math.max(0, totalProduced - totalOut);
+  return { totalProduced, totalOut, currentStock };
+}
+
 // Get current egg inventory stock
 router.get('/status', async (req, res) => {
   try {
-    const rows = await db.query("SELECT * FROM egg_inventory ORDER BY record_date DESC, id DESC LIMIT 1");
-    const latest = rows[0] || null;
-    const currentStock = latest ? latest.final_stock_butir : 0;
+    const { currentStock, totalProduced, totalOut } = await getStockStats();
     res.json({
       success: true,
       current_stock_butir: currentStock,
       formatted_stock: formatTrai(currentStock),
-      latest_record: latest
+      total_produced: totalProduced,
+      total_out: totalOut
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -37,8 +48,7 @@ router.post('/sale', async (req, res) => {
     if (nominal <= 0) return res.status(400).json({ success: false, message: 'Nominal penjualan harus lebih besar dari 0' });
     if (soldButir <= 0) return res.status(400).json({ success: false, message: 'Jumlah telur yang dijual harus diisi (dalam butir)' });
 
-    const rows = await db.query("SELECT final_stock_butir FROM egg_inventory ORDER BY record_date DESC, id DESC LIMIT 1");
-    const currentStock = rows[0] ? parseInt(rows[0].final_stock_butir) : 0;
+    const { currentStock } = await getStockStats();
 
     if (soldButir > currentStock) {
       return res.status(400).json({
@@ -80,25 +90,82 @@ router.post('/sale', async (req, res) => {
   }
 });
 
-// Get Egg Inventory & Sales History
+// Get Egg Inventory & Sales History (Unified Timeline)
 router.get('/history', async (req, res) => {
   try {
-    const history = await db.query("SELECT * FROM egg_inventory ORDER BY record_date DESC, id DESC");
+    const productions = await db.query(
+      "SELECT id, production_date AS record_date, good_eggs AS added_production_butir, notes FROM egg_productions WHERE good_eggs > 0"
+    );
+    const sales = await db.query(
+      "SELECT id, record_date, sold_butir, notes FROM egg_inventory WHERE sold_butir > 0 OR damaged_butir > 0 OR consumed_butir > 0"
+    );
+
+    const events = [];
+
+    productions.forEach(p => {
+      events.push({
+        id: `prod_${p.id}`,
+        raw_id: p.id,
+        source: 'production',
+        record_date: p.record_date,
+        record_type: 'masuk',
+        added_production_butir: parseInt(p.added_production_butir) || 0,
+        sold_butir: 0,
+        notes: p.notes ? `Produksi: ${p.notes}` : 'Produksi Telur Harian'
+      });
+    });
+
+    sales.forEach(s => {
+      events.push({
+        id: `inv_${s.id}`,
+        raw_id: s.id,
+        source: 'inventory',
+        record_date: s.record_date,
+        record_type: 'keluar',
+        added_production_butir: 0,
+        sold_butir: parseInt(s.sold_butir) || 0,
+        notes: s.notes || 'Penjualan Telur'
+      });
+    });
+
+    // Chronological sorting (oldest first)
+    events.sort((a, b) => {
+      const dateDiff = new Date(a.record_date) - new Date(b.record_date);
+      if (dateDiff !== 0) return dateDiff;
+      if (a.source === 'production' && b.source === 'inventory') return -1;
+      if (a.source === 'inventory' && b.source === 'production') return 1;
+      return a.raw_id - b.raw_id;
+    });
+
+    let runningStock = 0;
+    const historyWithStock = events.map(e => {
+      if (e.record_type === 'masuk') {
+        runningStock += e.added_production_butir;
+      } else {
+        runningStock = Math.max(0, runningStock - e.sold_butir);
+      }
+
+      return {
+        ...e,
+        initial_stock_butir: e.record_type === 'masuk' ? runningStock - e.added_production_butir : runningStock + e.sold_butir,
+        final_stock_butir: runningStock,
+        formatted_initial: formatTrai(e.record_type === 'masuk' ? runningStock - e.added_production_butir : runningStock + e.sold_butir),
+        formatted_added: formatTrai(e.added_production_butir),
+        formatted_sold: formatTrai(e.sold_butir),
+        formatted_final: formatTrai(runningStock)
+      };
+    });
+
+    // Reverse (newest first) for frontend table display
+    historyWithStock.sort((a, b) => {
+      const dateDiff = new Date(b.record_date) - new Date(a.record_date);
+      if (dateDiff !== 0) return dateDiff;
+      return b.raw_id - a.raw_id;
+    });
+
     res.json({
       success: true,
-      history: history.map(item => {
-        let recordType = 'masuk';
-        if (item.sold_butir > 0) recordType = 'keluar';
-        else if (item.added_production_butir > 0) recordType = 'masuk';
-        return {
-          ...item,
-          record_type: recordType,
-          formatted_initial: formatTrai(item.initial_stock_butir),
-          formatted_added: formatTrai(item.added_production_butir),
-          formatted_sold: formatTrai(item.sold_butir),
-          formatted_final: formatTrai(item.final_stock_butir)
-        };
-      })
+      history: historyWithStock
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -108,7 +175,16 @@ router.get('/history', async (req, res) => {
 // Delete Egg Inventory Record
 router.delete('/history/:id', async (req, res) => {
   try {
-    await db.query("DELETE FROM egg_inventory WHERE id = ?", [req.params.id]);
+    const rawId = req.params.id;
+    if (typeof rawId === 'string' && rawId.startsWith('prod_')) {
+      const prodId = rawId.replace('prod_', '');
+      await db.query("DELETE FROM egg_productions WHERE id = ?", [prodId]);
+    } else if (typeof rawId === 'string' && rawId.startsWith('inv_')) {
+      const invId = rawId.replace('inv_', '');
+      await db.query("DELETE FROM egg_inventory WHERE id = ?", [invId]);
+    } else {
+      await db.query("DELETE FROM egg_inventory WHERE id = ?", [rawId]);
+    }
     res.json({ success: true, message: 'Riwayat stok & penjualan berhasil dihapus' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

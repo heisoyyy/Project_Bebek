@@ -46,10 +46,9 @@ router.get('/', async (req, res) => {
     const totalUnpaidFeed = parseFloat(unpaidRows[0]?.total_unpaid || 0);
 
     // 4. Egg Inventory
-    const invRows = await db.query(
-      "SELECT final_stock_butir FROM egg_inventory ORDER BY record_date DESC, id DESC LIMIT 1"
-    );
-    const unsoldEggsButir = invRows[0]?.final_stock_butir || 0;
+    const prodSum = await db.query("SELECT COALESCE(SUM(good_eggs), 0) AS total_prod FROM egg_productions");
+    const outSum = await db.query("SELECT COALESCE(SUM(sold_butir + damaged_butir + consumed_butir), 0) AS total_out FROM egg_inventory");
+    const unsoldEggsButir = Math.max(0, (parseInt(prodSum[0]?.total_prod) || 0) - (parseInt(outSum[0]?.total_out) || 0));
 
     // 5. Finance - Current Month
     const financeRows = await db.query(
