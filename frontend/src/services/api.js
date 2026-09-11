@@ -34,7 +34,9 @@ export const feedApi = {
   use: (data) => api.post('/feed/usage', data),
   markPurchaseAsPaid: (id) => api.put(`/feed/purchases/${id}/pay`),
   getPurchases: () => api.get('/feed/purchases'),
-  getUsages: () => api.get('/feed/usages')
+  getUsages: () => api.get('/feed/usages'),
+  deletePurchase: (id) => api.delete(`/feed/purchases/${id}`),
+  deleteUsage: (id) => api.delete(`/feed/usages/${id}`)
 };
 
 export const inventoryApi = {

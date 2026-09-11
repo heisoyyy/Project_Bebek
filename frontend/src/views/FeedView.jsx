@@ -93,15 +93,27 @@ export default function FeedView() {
     }
   };
 
-  const handleUsageSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await feedApi.use(usageForm);
-      alert('Pemakaian pakan berhasil dicatat!');
-      setShowUsageModal(false);
-      fetchData();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Gagal menyimpan pemakaian pakan');
+  const handleDeletePurchase = async (id, feedName, quantity) => {
+    if (window.confirm(`Apakah Anda yakin ingin menghapus data pembelian ${quantity} KG ${feedName} ini?\n\nStok pakan akan otomatis dikurangi kembali.`)) {
+      try {
+        const res = await feedApi.deletePurchase(id);
+        alert(res.data.message || 'Riwayat pembelian berhasil dihapus');
+        fetchData();
+      } catch (err) {
+        alert(err.response?.data?.message || 'Gagal menghapus riwayat pembelian');
+      }
+    }
+  };
+
+  const handleDeleteUsage = async (id, feedName, quantity) => {
+    if (window.confirm(`Apakah Anda yakin ingin menghapus data pemakaian ${quantity} KG ${feedName} ini?\n\nStok pakan akan otomatis dikembalikan.`)) {
+      try {
+        const res = await feedApi.deleteUsage(id);
+        alert(res.data.message || 'Riwayat pemakaian berhasil dihapus');
+        fetchData();
+      } catch (err) {
+        alert(err.response?.data?.message || 'Gagal menghapus riwayat pemakaian');
+      }
     }
   };
 
@@ -176,6 +188,7 @@ export default function FeedView() {
                   <th>TANGGAL</th>
                   <th>BAHAN PAKAN</th>
                   <th>JUMLAH (KG)</th>
+                  <th>AKSI</th>
                 </tr>
               </thead>
               <tbody>
@@ -185,10 +198,19 @@ export default function FeedView() {
                       <td>{new Date(u.usage_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</td>
                       <td style={{ fontWeight: 600, color: 'white' }}>{u.feed_name}</td>
                       <td style={{ fontWeight: 700, color: '#f87171' }}>-{u.quantity_kg} KG</td>
+                      <td>
+                        <button 
+                          onClick={() => handleDeleteUsage(u.id, u.feed_name, u.quantity_kg)} 
+                          className="btn btn-outline" 
+                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: '#ef4444' }}
+                        >
+                          Hapus
+                        </button>
+                      </td>
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="3" style={{ textAlign: 'center', color: '#94a3b8' }}>Belum ada pemakaian pakan.</td></tr>
+                  <tr><td colSpan="4" style={{ textAlign: 'center', color: '#94a3b8' }}>Belum ada pemakaian pakan.</td></tr>
                 )}
               </tbody>
             </table>
@@ -207,6 +229,7 @@ export default function FeedView() {
                   <th>JUMLAH</th>
                   <th>TOTAL HARGA</th>
                   <th>STATUS BAYAR</th>
+                  <th>AKSI</th>
                 </tr>
               </thead>
               <tbody>
@@ -231,10 +254,19 @@ export default function FeedView() {
                           <span className="badge badge-success">Sudah Bayar</span>
                         )}
                       </td>
+                      <td>
+                        <button 
+                          onClick={() => handleDeletePurchase(p.id, p.feed_name, p.quantity_kg)} 
+                          className="btn btn-outline" 
+                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: '#ef4444' }}
+                        >
+                          Hapus
+                        </button>
+                      </td>
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8' }}>Belum ada pembelian pakan.</td></tr>
+                  <tr><td colSpan="6" style={{ textAlign: 'center', color: '#94a3b8' }}>Belum ada pembelian pakan.</td></tr>
                 )}
               </tbody>
             </table>

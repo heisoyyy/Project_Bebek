@@ -172,4 +172,54 @@ router.get('/usages', async (req, res) => {
   }
 });
 
+// Delete Feed Purchase Record
+router.delete('/purchases/:id', async (req, res) => {
+  try {
+    const purchaseRows = await db.query("SELECT * FROM feed_purchases WHERE id = ?", [req.params.id]);
+    if (!purchaseRows.length) return res.status(404).json({ success: false, message: 'Data pembelian pakan tidak ditemukan' });
+    const purchase = purchaseRows[0];
+
+    // Subtract purchased quantity from stock
+    await db.query(
+      "UPDATE feed_items SET stock_kg = GREATEST(0, stock_kg - ?) WHERE id = ?",
+      [purchase.quantity_kg, purchase.feed_item_id]
+    );
+
+    // Delete associated financial transaction if paid
+    await db.query(
+      "DELETE FROM financial_transactions WHERE reference_type = 'feed_purchase' AND reference_id = ?",
+      [purchase.id]
+    );
+
+    // Delete purchase record
+    await db.query("DELETE FROM feed_purchases WHERE id = ?", [req.params.id]);
+
+    res.json({ success: true, message: 'Riwayat pembelian pakan berhasil dihapus dan stok telah disesuaikan' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Delete Feed Usage Record
+router.delete('/usages/:id', async (req, res) => {
+  try {
+    const usageRows = await db.query("SELECT * FROM feed_usages WHERE id = ?", [req.params.id]);
+    if (!usageRows.length) return res.status(404).json({ success: false, message: 'Data pemakaian pakan tidak ditemukan' });
+    const usage = usageRows[0];
+
+    // Restore used quantity back to stock
+    await db.query(
+      "UPDATE feed_items SET stock_kg = stock_kg + ? WHERE id = ?",
+      [usage.quantity_kg, usage.feed_item_id]
+    );
+
+    // Delete usage record
+    await db.query("DELETE FROM feed_usages WHERE id = ?", [req.params.id]);
+
+    res.json({ success: true, message: 'Riwayat pemakaian pakan berhasil dihapus dan stok telah dikembalikan' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;
